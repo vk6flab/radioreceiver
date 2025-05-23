@@ -1,18 +1,13 @@
 import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
+  getDemod,
   getMode,
   getSchemes,
   modeParameters,
-  ModulationScheme,
   type Mode,
-  type Scheme,
+  type Demod,
 } from "@jtarrio/webrtlsdr/demod/modes";
-import { SchemeWBFM } from "@jtarrio/webrtlsdr/demod/scheme-wbfm";
-import { SchemeNBFM } from "@jtarrio/webrtlsdr/demod/scheme-nbfm";
-import { SchemeAM } from "@jtarrio/webrtlsdr/demod/scheme-am";
-import { SchemeSSB } from "@jtarrio/webrtlsdr/demod/scheme-ssb";
-import { SchemeCW } from "@jtarrio/webrtlsdr/demod/scheme-cw";
 
 @customElement("demod-benchmark")
 class DemodBenchmark extends LitElement {
@@ -81,9 +76,7 @@ class DemodBenchmark extends LitElement {
   @property({ attribute: false }) availableModes = new Map(
     getSchemes().map((s) => [s, getMode(s)])
   );
-  @property({ attribute: false }) mode: Mode = (this.availableModes
-    .entries()
-    .next().value || [null, { scheme: "WBFM", stereo: false }])[1];
+  @property({ attribute: false }) mode: Mode = getMode("WBFM");
   @state() running: boolean = false;
   @state() result: number | undefined;
 
@@ -104,7 +97,7 @@ class DemodBenchmark extends LitElement {
 
   onModeChange(e: Event) {
     let input = e.target as HTMLSelectElement;
-    let value = input.selectedOptions[0].value as Scheme;
+    let value = input.selectedOptions[0].value;
     let mode = this.availableModes.get(value);
     if (mode) this.mode = mode;
   }
@@ -160,23 +153,11 @@ class DemodBenchmark extends LitElement {
   }
 }
 
-function makeScheme(mode: Mode, sampleRate: number): ModulationScheme {
+function makeScheme(mode: Mode, sampleRate: number): Demod<Mode> {
   const outRate = 48000;
-  switch (mode.scheme) {
-    case "WBFM":
-      return new SchemeWBFM(sampleRate, outRate, mode);
-    case "NBFM":
-      return new SchemeNBFM(sampleRate, outRate, mode);
-    case "AM":
-      return new SchemeAM(sampleRate, outRate, mode);
-    case "USB":
-    case "LSB":
-      return new SchemeSSB(sampleRate, outRate, mode);
-    case "CW":
-      return new SchemeCW(sampleRate, outRate, mode);
-  }
+  return getDemod(sampleRate, outRate, mode);
 }
-this;
+
 function twoDig(n: number) {
   return Math.floor(n * 100) / 100;
 }
